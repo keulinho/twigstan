@@ -63,6 +63,11 @@
     "bin": [
         "bin/twigstan"
     ],
+    "extra": {
+        "branch-alias": {
+            "dev-codex/shopware-analysis": "0.2.x-dev"
+        }
+    },
     "config": {
         "allow-plugins": {
             "ergebnis/composer-normalize": true,
