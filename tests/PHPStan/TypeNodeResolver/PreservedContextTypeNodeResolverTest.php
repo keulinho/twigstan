@@ -46,4 +46,25 @@ final class PreservedContextTypeNodeResolverTest extends PHPStanTestCase
         self::assertTrue($open->hasOffsetValueType(new ConstantStringType('optional'))->maybe());
         self::assertTrue($open->hasOffsetValueType(new ConstantStringType('unknown'))->maybe());
     }
+
+    public function testReusesIdenticalNestedShapesWithinOneContext(): void
+    {
+        $resolver = self::getContainer()->getByType(TypeStringResolver::class);
+        $type = $resolver->resolve('array{first: array{known: int}, second: array{known: int}, optional: array{known?: int}}', new NameScope(null, [], '__TwigTemplate_Test'));
+        $first = $type->getOffsetValueType(new ConstantStringType('first'));
+        $second = $type->getOffsetValueType(new ConstantStringType('second'));
+
+        self::assertSame($first, $second);
+        self::assertTrue($first->getConstantArrays()[0]->isArrayShapePreserved());
+        self::assertTrue($type->getOffsetValueType(new ConstantStringType('optional'))->hasOffsetValueType(new ConstantStringType('known'))->maybe());
+    }
+
+    public function testDoesNotReuseShapesAcrossNameScopes(): void
+    {
+        $resolver = self::getContainer()->getByType(TypeStringResolver::class);
+        foreach (['FirstSubject', 'SecondSubject'] as $class) {
+            $type = $resolver->resolve('array{subject: Subject}', new NameScope(null, ['subject' => $class], '__TwigTemplate_Test'));
+            self::assertSame([$class], $type->getOffsetValueType(new ConstantStringType('subject'))->getObjectClassNames());
+        }
+    }
 }

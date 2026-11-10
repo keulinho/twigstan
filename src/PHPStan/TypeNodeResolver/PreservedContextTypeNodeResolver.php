@@ -15,6 +15,7 @@ use PHPStan\Type\Constant\ConstantArrayType;
 use PHPStan\Type\LateResolvableType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeTraverser;
+use WeakMap;
 
 #[AutowiredService]
 final class PreservedContextTypeNodeResolver implements TypeNodeResolverExtension, TypeNodeResolverAwareExtension
@@ -25,6 +26,11 @@ final class PreservedContextTypeNodeResolver implements TypeNodeResolverExtensio
      * @var array<int, true>
      */
     private array $resolving = [];
+
+    /**
+     * @var null|WeakMap<NameScope, array<string, Type>>
+     */
+    private ?WeakMap $resolvedShapes = null;
 
     public function setTypeNodeResolver(TypeNodeResolver $typeNodeResolver): void
     {
@@ -43,13 +49,20 @@ final class PreservedContextTypeNodeResolver implements TypeNodeResolverExtensio
             return null;
         }
 
+        $this->resolvedShapes ??= new WeakMap();
+        $key = (string) $typeNode;
+
+        if (isset($this->resolvedShapes[$nameScope][$key])) {
+            return $this->resolvedShapes[$nameScope][$key];
+        }
+
         $this->resolving[$id] = true;
 
         try {
             // Resolve nested shapes through this extension before the default resolver combines them.
             $type = $this->resolver->resolve($typeNode, $nameScope);
 
-            return TypeTraverser::map($type, static function (Type $type, callable $traverse): Type {
+            $type = TypeTraverser::map($type, static function (Type $type, callable $traverse): Type {
                 if ($type instanceof LateResolvableType) {
                     $type = $type->resolve();
                 }
@@ -61,8 +74,18 @@ final class PreservedContextTypeNodeResolver implements TypeNodeResolverExtensio
 
                 return $traverse($type);
             });
+
+            $this->resolvedShapes[$nameScope] ??= [];
+            $this->resolvedShapes[$nameScope][$key] = $type;
+
+            return $type;
         } finally {
             unset($this->resolving[$id]);
+
+            // Share immutable subtrees only within this resolution, with each name scope kept separate.
+            if ($this->resolving === []) {
+                $this->resolvedShapes = null;
+            }
         }
     }
 }
