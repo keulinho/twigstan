@@ -17,6 +17,7 @@ use TwigStan\Processing\Flattening\PhpVisitor\InjectBlockMethodsFromParentVisito
 use TwigStan\Processing\Flattening\PhpVisitor\InjectPropertiesFromParentVisitor;
 use TwigStan\Processing\Flattening\PhpVisitor\InlineParentTemplateVisitor;
 use TwigStan\Processing\Flattening\PhpVisitor\MainMethodFinderVisitor;
+use TwigStan\Processing\Flattening\PhpVisitor\PreserveContextVisitor;
 use TwigStan\Processing\Flattening\PhpVisitor\RemoveEmbedsVisitor;
 use TwigStan\Processing\Flattening\PhpVisitor\RenameBlocksVisitor;
 use TwigStan\Twig\Metadata\MetadataRegistry;
@@ -195,6 +196,12 @@ final class TwigFlattener
                     ),
                 ),
             );
+        }
+
+        // Write preservation calls before PHPStan parses the files so automatic fixes have valid token positions.
+        foreach ($results as $result) {
+            $stmts = (new NodeTraverser(new PreserveContextVisitor()))->traverse($this->phpParser->parseFile($result->phpFile));
+            $this->filesystem->dumpFile($result->phpFile, $this->prettyPrinter->prettyPrintFile($stmts));
         }
 
         return $results;

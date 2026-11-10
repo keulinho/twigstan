@@ -2,14 +2,11 @@
 
 declare(strict_types=1);
 
-namespace TwigStan\PHPStan\Visitor;
+namespace TwigStan\Processing\Flattening\PhpVisitor;
 
 use PhpParser\Node;
 use PhpParser\NodeVisitorAbstract;
-use PHPStan\DependencyInjection\AutowiredService;
-use PHPStan\DependencyInjection\Conditional;
 
-#[Conditional(attribute: new AutowiredService(), if: 'not(%twigstan.phases.templateContextCollecting%)')]
 final class PreserveContextVisitor extends NodeVisitorAbstract
 {
     private bool $compiledTemplate = false;

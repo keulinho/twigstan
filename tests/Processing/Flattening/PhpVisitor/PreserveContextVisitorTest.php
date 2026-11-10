@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace TwigStan\PHPStan\Visitor;
+namespace TwigStan\Processing\Flattening\PhpVisitor;
 
 use PhpParser\Node;
 use PhpParser\NodeFinder;
